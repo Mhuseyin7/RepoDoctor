@@ -1,0 +1,27 @@
+name: RepoDoctor
+description: Run local-first RepoDoctor repository diagnostics in GitHub Actions.
+branding:
+  icon: shield
+  color: blue
+inputs:
+  fail-on:
+    description: Fail when a finding at or above this severity is detected (low, medium, high).
+    required: false
+    default: high
+  format:
+    description: Output format (terminal, json, markdown, sarif).
+    required: false
+    default: terminal
+  baseline:
+    description: Apply .repodoctor-baseline.json if present.
+    required: false
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        python -m pip install "$GITHUB_ACTION_PATH"
+        baseline_flag="--baseline"
+        if [ "${{ inputs.baseline }}" != "true" ]; then baseline_flag="--no-baseline"; fi
+        repodoctor scan "$GITHUB_WORKSPACE" --format "${{ inputs.format }}" --fail-on "${{ inputs.fail-on }}" $baseline_flag
