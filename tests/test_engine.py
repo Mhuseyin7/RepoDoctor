@@ -53,3 +53,22 @@ def test_baseline_hides_existing_fingerprints(tmp_path: Path) -> None:
     second = scan(tmp_path, config=Config(), baseline=load_baseline(tmp_path))
     assert first.findings
     assert second.findings == []
+
+
+def test_detects_insecure_docker_and_cors_configuration(tmp_path: Path) -> None:
+    write(tmp_path, ".gitignore", ".env\n")
+    write(tmp_path, "README.md", "# demo")
+    write(tmp_path, "LICENSE", "MIT")
+    write(
+        tmp_path,
+        "compose.yml",
+        "services:\n  app:\n    privileged: true\n    network_mode: host\n"
+        "    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock\n",
+    )
+    write(
+        tmp_path,
+        "main.py",
+        'app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True)\n',
+    )
+    findings = {item.rule_id for item in scan(tmp_path, config=Config()).findings}
+    assert {"SEC-005", "DOCKER-002", "DOCKER-003", "DOCKER-004"} <= findings

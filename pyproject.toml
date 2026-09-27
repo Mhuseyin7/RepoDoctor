@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "repodoctor"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local-first repository health, security, and developer-experience auditing."
 readme = "README.md"
 requires-python = ">=3.13"
@@ -12,7 +12,7 @@ license = { text = "MIT" }
 authors = [{ name = "RepoDoctor Contributors" }]
 keywords = ["security", "static-analysis", "cli", "sarif", "repository"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Environment :: Console",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
@@ -26,14 +26,21 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<9", "ruff>=0.6,<1", "mypy>=1.10,<2"]
+server = [
+  "alembic>=1.13,<2",
+  "fastapi>=0.115,<1",
+  "psycopg[binary]>=3.2,<4",
+  "sqlalchemy>=2.0,<3",
+  "uvicorn[standard]>=0.30,<1",
+]
+dev = ["pytest>=8,<9", "ruff>=0.6,<1", "mypy>=1.10,<2", "httpx>=0.27,<1"]
 
 [project.scripts]
 repodoctor = "repodoctor.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/your-org/repodoctor"
-Documentation = "https://github.com/your-org/repodoctor#readme"
+Homepage = "https://github.com/Mhuseyin7/RepoDoctor"
+Documentation = "https://github.com/Mhuseyin7/RepoDoctor#readme"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/repodoctor"]

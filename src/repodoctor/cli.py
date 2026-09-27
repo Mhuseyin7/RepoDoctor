@@ -12,7 +12,7 @@ from .baseline import load as load_baseline
 from .config import DEFAULT_CONFIG, load_config
 from .engine import ConfigurationError, scan, should_fail
 from .models import Severity
-from .reporters import OutputFormat, render
+from .reporters import OutputFormat, render, write_report
 from .rules import RULES
 
 app = typer.Typer(no_args_is_help=True, help="Local-first repository health and security auditing.")
@@ -34,6 +34,10 @@ def scan_command(
         Severity | None,
         typer.Option("--fail-on", help="Override configured CI failure severity."),
     ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Write JSON, SARIF, or Markdown to a file."),
+    ] = None,
     use_baseline: Annotated[
         bool,
         typer.Option(
@@ -50,7 +54,13 @@ def scan_command(
             result.findings = [
                 item for item in result.findings if item.severity.weight >= severity.weight
             ]
-        render(result, output_format, console)
+        if output:
+            if output_format == "terminal":
+                raise ConfigurationError("--output requires json, sarif, or markdown format")
+            write_report(result, output_format, output)
+            console.print(f"Report written to [green]{output}[/green]")
+        else:
+            render(result, output_format, console)
         if should_fail(result, fail_on or config.severity.fail_on):
             raise typer.Exit(1)
     except ConfigurationError as exc:
@@ -98,6 +108,53 @@ def explain(rule_id: Annotated[str, typer.Argument(help="Rule ID, such as SEC-00
         f"Severity: {spec.severity.value.title()}\nConfidence: {spec.confidence.title()}\n\n"
         f"[bold]Remediation[/bold]\n{spec.remediation}"
     )
+
+
+@app.command()
+def fix(
+    path: Annotated[Path, typer.Argument(help="Repository directory to fix.")] = Path("."),
+    apply: Annotated[
+        bool, typer.Option("--apply", help="Apply deterministic repository-hygiene fixes.")
+    ] = False,
+) -> None:
+    """Preview or apply the small, deterministic fixes RepoDoctor supports."""
+    from .fixes import planned_fixes
+
+    root = path.resolve()
+    try:
+        changes = planned_fixes(root, load_config(root))
+    except ValueError as exc:
+        console.print(f"[red]Configuration error:[/red] {exc}")
+        raise typer.Exit(2) from exc
+    if not changes:
+        console.print("[green]No safe fixes are available.[/green]")
+        return
+    for change in changes:
+        console.print(f"[cyan]{change.description}[/cyan] → {change.path}")
+    if not apply:
+        console.print("\nPreview only. Re-run with [bold]--apply[/bold] to write these changes.")
+        return
+    for change in changes:
+        change.apply()
+    console.print(f"[green]Applied {len(changes)} deterministic fix(es).[/green]")
+
+
+@app.command()
+def serve(
+    host: Annotated[str, typer.Option(help="Interface for the self-hosted API.")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(min=1, max=65535, help="Port for the API.")] = 8000,
+) -> None:
+    """Run the optional local dashboard API (install with `repodoctor[server]`)."""
+    try:
+        import uvicorn
+
+        from .api import create_app
+    except ImportError as exc:
+        console.print(
+            "[red]Server dependencies missing.[/red] Install with: pip install 'repodoctor[server]'"
+        )
+        raise typer.Exit(2) from exc
+    uvicorn.run(create_app(), host=host, port=port)
 
 
 @baseline_app.command("create")

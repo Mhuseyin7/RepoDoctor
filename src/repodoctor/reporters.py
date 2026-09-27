@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from pathlib import Path
 from typing import Literal
 
 from rich.console import Console
@@ -22,6 +23,22 @@ def render(result: ScanResult, output_format: OutputFormat, console: Console) ->
         console.print(to_markdown(result))
     else:
         terminal(result, console)
+
+
+def serialize(result: ScanResult, output_format: OutputFormat) -> str:
+    """Serialize a report without terminal formatting, for CI artifacts."""
+    if output_format == "json":
+        return result.model_dump_json(indent=2)
+    if output_format == "sarif":
+        return json.dumps(to_sarif(result), indent=2)
+    if output_format == "markdown":
+        return to_markdown(result)
+    raise ValueError("Terminal output cannot be written as a report file")
+
+
+def write_report(result: ScanResult, output_format: OutputFormat, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(serialize(result, output_format) + "\n", encoding="utf-8")
 
 
 def terminal(result: ScanResult, console: Console) -> None:

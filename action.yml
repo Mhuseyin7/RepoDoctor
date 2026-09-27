@@ -9,9 +9,13 @@ inputs:
     required: false
     default: high
   format:
-    description: Output format (terminal, json, markdown, sarif).
+    description: Output format (json, markdown, sarif).
     required: false
-    default: terminal
+    default: sarif
+  report-path:
+    description: Report destination relative to the repository workspace.
+    required: false
+    default: repodoctor.sarif
   baseline:
     description: Apply .repodoctor-baseline.json if present.
     required: false
@@ -24,4 +28,4 @@ runs:
         python -m pip install "$GITHUB_ACTION_PATH"
         baseline_flag="--baseline"
         if [ "${{ inputs.baseline }}" != "true" ]; then baseline_flag="--no-baseline"; fi
-        repodoctor scan "$GITHUB_WORKSPACE" --format "${{ inputs.format }}" --fail-on "${{ inputs.fail-on }}" $baseline_flag
+        repodoctor scan "$GITHUB_WORKSPACE" --format "${{ inputs.format }}" --output "$GITHUB_WORKSPACE/${{ inputs.report-path }}" --fail-on "${{ inputs.fail-on }}" $baseline_flag

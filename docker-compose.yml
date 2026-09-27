@@ -1,0 +1,37 @@
+services:
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: repodoctor
+      POSTGRES_USER: repodoctor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repodoctor -d repodoctor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    environment:
+      REPODOCTOR_DATABASE_URL: postgresql+psycopg://repodoctor:${POSTGRES_PASSWORD}@database:5432/repodoctor
+      REPODOCTOR_ALLOWED_ROOTS: /repositories
+      REPODOCTOR_CORS_ORIGINS: http://localhost:3000
+    depends_on:
+      database:
+        condition: service_healthy
+    ports: ["8000:8000"]
+    volumes:
+      - ./sample-repositories:/repositories:ro
+
+  web:
+    build: ./apps/web
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on: [api]
+    ports: ["3000:3000"]
+
+volumes:
+  postgres-data:

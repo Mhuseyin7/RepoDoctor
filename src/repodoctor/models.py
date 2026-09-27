@@ -78,3 +78,16 @@ class ScanResult(BaseModel):
     skipped_files: int
     version: str
     scanned_files: int = 0
+
+
+class ScanSummary(BaseModel):
+    """Persistable scan metadata used by the optional self-hosted dashboard."""
+
+    id: str
+    repository: str
+    created_at: str
+    findings_count: int
+    high_count: int
+    medium_count: int
+    low_count: int
+    scores: dict[str, int]

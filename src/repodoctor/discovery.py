@@ -69,15 +69,28 @@ def discover(root: Path, config: Config) -> RepositoryProfile:
         LANGUAGE_SUFFIXES[p.suffix.lower()] for p in files if p.suffix.lower() in LANGUAGE_SUFFIXES
     }
     frameworks: set[str] = set()
-    if "next.config.js" in file_names or "next.config.ts" in file_names:
+    if {"next.config.js", "next.config.ts", "next.config.mjs"} & file_names:
         frameworks.add("Next.js")
     package_json = _read_optional(root / "package.json")
+    sample_text = _all_text(files)
     if '"react"' in package_json:
         frameworks.add("React")
-    if '"fastapi"' in _read_optional(root / "pyproject.toml") or "fastapi" in _all_text(files):
+    if '"astro"' in package_json or "astro.config.mjs" in file_names:
+        frameworks.add("Astro")
+    if '"vue"' in package_json:
+        frameworks.add("Vue")
+    if '"express"' in package_json:
+        frameworks.add("Express")
+    if '"@nestjs/core"' in package_json:
+        frameworks.add("NestJS")
+    if '"fastapi"' in _read_optional(root / "pyproject.toml") or "fastapi" in sample_text:
         frameworks.add("FastAPI")
     if "manage.py" in file_names:
         frameworks.add("Django")
+    if "flask" in sample_text:
+        frameworks.add("Flask")
+    if "artisan" in file_names or "laravel/framework" in _read_optional(root / "composer.json"):
+        frameworks.add("Laravel")
     managers = {
         manager
         for marker, manager in {
@@ -100,12 +113,18 @@ def discover(root: Path, config: Config) -> RepositoryProfile:
         for marker, label in {
             "Dockerfile": "Docker",
             "docker-compose.yml": "Docker Compose",
+            "docker-compose.yaml": "Docker Compose",
             "compose.yaml": "Docker Compose",
+            "compose.yml": "Docker Compose",
             "Makefile": "Make",
-            "main.tf": "Terraform",
+            "nginx.conf": "Nginx",
         }.items()
         if marker in file_names
     }
+    if any(path.suffix == ".tf" for path in files):
+        infrastructure.add("Terraform")
+    if "kustomization.yaml" in file_names or "kustomization.yml" in file_names:
+        infrastructure.add("Kubernetes")
     if any(".github/workflows/" in p.as_posix() for p in files):
         infrastructure.add("GitHub Actions")
     return RepositoryProfile(

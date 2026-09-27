@@ -71,6 +71,26 @@ RULES: dict[str, Rule] = {
         "Shell execution with interpolated input can enable command injection.",
         "medium",
     ),
+    "SEC-005": rule(
+        "SEC-005",
+        "Credentialed wildcard CORS",
+        Category.SECURITY,
+        Severity.HIGH,
+        "Use an explicit origin allow-list when credentials are enabled; never combine "
+        "credentials with a wildcard origin.",
+        "Wildcard CORS combined with credential support can expose authenticated responses "
+        "to untrusted origins.",
+        "medium",
+    ),
+    "SEC-006": rule(
+        "SEC-006",
+        "Debug mode enabled",
+        Category.SECURITY,
+        Severity.MEDIUM,
+        "Disable debug mode in production and configure it through environment-specific settings.",
+        "Debug mode can disclose stack traces, configuration, or development-only behavior.",
+        "medium",
+    ),
     "DOCKER-001": rule(
         "DOCKER-001",
         "Container runs as root",
@@ -87,6 +107,25 @@ RULES: dict[str, Rule] = {
         Severity.HIGH,
         "Remove privileged mode and grant only the minimum required capabilities.",
         "Privileged containers substantially weaken isolation.",
+    ),
+    "DOCKER-003": rule(
+        "DOCKER-003",
+        "Docker socket mounted",
+        Category.DOCKER,
+        Severity.HIGH,
+        "Avoid mounting the host Docker socket; use a narrowly scoped build service "
+        "or rootless alternative.",
+        "A Docker socket mount can grant effective control of the host Docker daemon.",
+    ),
+    "DOCKER-004": rule(
+        "DOCKER-004",
+        "Host networking enabled",
+        Category.DOCKER,
+        Severity.MEDIUM,
+        "Use explicit port mappings and service networks instead of host networking "
+        "where possible.",
+        "Host networking removes network namespace isolation.",
+        "medium",
     ),
     "CICD-001": rule(
         "CICD-001",
@@ -254,6 +293,9 @@ def run_rules(profile: RepositoryProfile) -> list[Finding]:
                 _finding(profile, "SEC-002", path=path, message="Tracked environment file detected")
             )
         if path.suffix.lower() in SOURCE_SUFFIXES:
+            source = "\n".join(lines)
+            if _has_credentialed_wildcard_cors(source):
+                findings.append(_finding(profile, "SEC-005", path=path))
             if len(lines) > 1000:
                 findings.append(
                     _finding(
@@ -278,6 +320,12 @@ def run_rules(profile: RepositoryProfile) -> list[Finding]:
                         )
                     )
                 executable = _code_without_strings(raw, path.suffix.lower())
+                if _debug_enabled(executable):
+                    findings.append(
+                        _finding(
+                            profile, "SEC-006", path=path, line=number, excerpt=raw.strip()[:200]
+                        )
+                    )
                 if re.search(r"\b(?:eval|exec)\s*\(", executable) or "Function(" in executable:
                     findings.append(
                         _finding(
@@ -314,6 +362,14 @@ def run_rules(profile: RepositoryProfile) -> list[Finding]:
                 if re.match(r"\s*privileged\s*:\s*true\b", raw, re.IGNORECASE):
                     findings.append(
                         _finding(profile, "DOCKER-002", path=path, line=number, excerpt=raw.strip())
+                    )
+                if re.search(r"/var/run/docker\.sock\s*:", raw):
+                    findings.append(
+                        _finding(profile, "DOCKER-003", path=path, line=number, excerpt=raw.strip())
+                    )
+                if re.match(r"\s*network_mode\s*:\s*[\"']?host", raw, re.IGNORECASE):
+                    findings.append(
+                        _finding(profile, "DOCKER-004", path=path, line=number, excerpt=raw.strip())
                     )
         if relative.startswith(".github/workflows/") and path.suffix in {".yml", ".yaml"}:
             _workflow_rules(profile, path, lines, findings)
@@ -376,6 +432,20 @@ def _looks_like_placeholder(value: str) -> bool:
             "<secret",
             "abcdefghijklmnopqrstuvwxyz",
         )
+    )
+
+
+def _has_credentialed_wildcard_cors(source: str) -> bool:
+    lowered = source.lower()
+    wildcard = bool(re.search(r"(?:allow_origins|origin)\s*[:=]\s*\[?\s*[\"']\*[\"']", lowered))
+    credentials = bool(re.search(r"(?:allow_credentials|credentials)\s*[:=]\s*true", lowered))
+    return wildcard and credentials
+
+
+def _debug_enabled(executable: str) -> bool:
+    return bool(
+        re.search(r"\bdebug\s*=\s*true\b", executable, re.IGNORECASE)
+        or re.search(r"\bdebug\s*:\s*true\b", executable, re.IGNORECASE)
     )
 
 

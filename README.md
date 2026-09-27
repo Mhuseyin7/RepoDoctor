@@ -27,6 +27,29 @@ pipx install git+https://github.com/Mhuseyin7/RepoDoctor.git
 repodoctor scan .
 ```
 
+## Self-hosted dashboard
+
+CLI bağımsız çalışır; dashboard tamamen optional'dır. Dashboard API, scan history ve finding'leri seçtiğiniz database'e saklar. Source code yalnızca `REPODOCTOR_ALLOWED_ROOTS` içindeki local path'lerde analiz edilir.
+
+```bash
+# API: SQLite ile local development
+python -m pip install -e ".[server]"
+$env:REPODOCTOR_ALLOWED_ROOTS = "C:\repositories"
+repodoctor serve --host 127.0.0.1 --port 8000
+
+# Web dashboard
+cd apps/web
+npm install
+$env:NEXT_PUBLIC_API_URL = "http://localhost:8000"
+npm run dev
+```
+
+Production-like local stack için `.env.example` dosyasını `.env` olarak kopyalayın, güçlü bir `POSTGRES_PASSWORD` ayarlayın ve `docker compose up --build` çalıştırın. API `http://localhost:8000`, dashboard `http://localhost:3000` üzerinde açılır. PostgreSQL için `REPODOCTOR_DATABASE_URL` kullanılır; Alembic migration'ları `migrations/` dizinindedir.
+
+## Release ve distribution
+
+`v*` tag push'ları wheel ve source distribution üretir, GitHub Release oluşturur. GitHub Release publish edildiğinde PyPI trusted publishing workflow'u devreye girer; PyPI proje ayarlarında GitHub publisher olarak `Mhuseyin7/RepoDoctor` tanımlanmalıdır. Bu tasarım API token saklamaz. Publish sonrası kullanıcılar `pipx install repodoctor` ile CLI'ı kurabilir.
+
 Local development için:
 
 ```bash
@@ -128,6 +151,7 @@ JSON output CI system veya internal tooling için uygundur. SARIF 2.1.0 output, 
 
 ```bash
 repodoctor scan . --format sarif
+repodoctor scan . --format sarif --output repodoctor.sarif
 ```
 
 Her finding; rule ID, severity, confidence, file location, remediation ve stable fingerprint taşır. Bu sayede CI result'ları ve baseline karşılaştırmaları machine-readable kalır.
@@ -168,6 +192,8 @@ Codebase, analyzer ve rule'ların bağımsız test edilebileceği modüllere ayr
 - `engine`: rule filtering, scoring, suppression ve baseline behavior
 - `reporters`: terminal, JSON, Markdown ve SARIF serialization
 - `cli`: Typer tabanlı command interface
+- `api`: FastAPI + SQLAlchemy ile opt-in scan persistence ve self-hosted endpoint'ler
+- `apps/web`: Next.js, TypeScript strict mode, Tailwind ve TanStack Query dashboard
 
 ## Privacy ve güvenlik yaklaşımı
 

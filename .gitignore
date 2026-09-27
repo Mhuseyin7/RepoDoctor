@@ -7,3 +7,8 @@ __pycache__/
 dist/
 build/
 .env
+*.sarif
+repodoctor.db
+apps/web/node_modules/
+apps/web/.next/
+apps/web/*.tsbuildinfo
