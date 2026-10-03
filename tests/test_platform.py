@@ -29,6 +29,12 @@ def test_dashboard_api_persists_local_scan(tmp_path: Path, monkeypatch) -> None:
     database = tmp_path / "dashboard.db"
     app = create_app(f"sqlite:///{database.as_posix()}")
     with TestClient(app) as client:
+        health = client.get("/api/health")
+        assert health.status_code == 200
+        assert health.json()["status"] == "ok"
+        settings = client.get("/api/settings")
+        assert settings.status_code == 200
+        assert "database_url" not in settings.json()
         response = client.post("/api/scans", json={"path": str(tmp_path)})
         assert response.status_code == 201, response.text
         scan_id = response.json()["id"]

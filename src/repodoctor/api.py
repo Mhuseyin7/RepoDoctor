@@ -18,7 +18,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, create_engine, select
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, create_engine, select, text
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -82,7 +82,6 @@ class RepositoryView(BaseModel):
 
 class SettingsView(BaseModel):
     allowed_roots: list[str]
-    database_url: str
 
 
 def _database_url() -> str:
@@ -156,12 +155,16 @@ def create_app(database_url: str | None = None) -> FastAPI:
             yield session
 
     @app.get("/api/health")
-    def health() -> dict[str, str]:
+    def health(session: Session = Depends(get_session)) -> dict[str, str]:  # noqa: B008
+        """Report readiness only after the persistence layer is reachable."""
+        session.execute(text("SELECT 1"))
         return {"status": "ok", "service": "repodoctor-api"}
 
     @app.get("/api/settings", response_model=SettingsView)
     def settings() -> SettingsView:
-        return SettingsView(allowed_roots=[str(root) for root in allowed_roots], database_url=url)
+        # Database URLs commonly embed credentials, so they must never be exposed
+        # through the browser-facing API.
+        return SettingsView(allowed_roots=[str(root) for root in allowed_roots])
 
     @app.get("/api/rules")
     def rules() -> list[dict[str, Any]]:

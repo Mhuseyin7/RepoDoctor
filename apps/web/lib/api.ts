@@ -29,7 +29,7 @@ export type Finding = {
 
 export type ScanDetail = { findings: Finding[]; scores: Record<string, number> };
 export type Rule = { id: string; title: string; severity: string; category: string };
-export type Settings = { allowed_roots: string[]; database_url: string };
+export type Settings = { allowed_roots: string[] };
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
