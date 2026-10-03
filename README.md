@@ -44,7 +44,7 @@ $env:NEXT_PUBLIC_API_URL = "http://localhost:8000"
 npm run dev
 ```
 
-Production-like local stack için `.env.example` dosyasını `.env` olarak kopyalayın, güçlü bir `POSTGRES_PASSWORD` ayarlayın ve `docker compose up --build` çalıştırın. API `http://localhost:8000`, dashboard `http://localhost:3000` üzerinde açılır. PostgreSQL için `REPODOCTOR_DATABASE_URL` kullanılır; Alembic migration'ları `migrations/` dizinindedir.
+Production stack; PostgreSQL, API, dashboard ve Caddy reverse proxy içerir. API ile dashboard doğrudan public port açmaz; yalnızca Caddy üzerinden ulaşılır. İlk kurulum, HTTPS, Basic Auth, backup, update ve rollback adımları için [DEPLOYMENT.md](DEPLOYMENT.md) dosyasını izleyin. PostgreSQL için `REPODOCTOR_DATABASE_URL` kullanılır; Alembic migration'ları container başlangıcında uygulanır.
 
 ## Release ve distribution
 

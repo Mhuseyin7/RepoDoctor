@@ -40,6 +40,8 @@ services:
     restart: unless-stopped
     environment:
       CADDY_SITE_ADDRESS: ${CADDY_SITE_ADDRESS:?set CADDY_SITE_ADDRESS in .env}
+      CADDY_BASIC_AUTH_USER: ${CADDY_BASIC_AUTH_USER:?set CADDY_BASIC_AUTH_USER in .env}
+      CADDY_BASIC_AUTH_HASH: ${CADDY_BASIC_AUTH_HASH:?set CADDY_BASIC_AUTH_HASH in .env}
     depends_on:
       api:
         condition: service_healthy
