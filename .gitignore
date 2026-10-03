@@ -12,3 +12,5 @@ repodoctor.db
 apps/web/node_modules/
 apps/web/.next/
 apps/web/*.tsbuildinfo
+caddy-data/
+caddy-config/

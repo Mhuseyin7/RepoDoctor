@@ -1,6 +1,7 @@
 services:
   database:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: repodoctor
       POSTGRES_USER: repodoctor
@@ -15,23 +16,44 @@ services:
 
   api:
     build: .
+    restart: unless-stopped
     environment:
       REPODOCTOR_DATABASE_URL: postgresql+psycopg://repodoctor:${POSTGRES_PASSWORD}@database:5432/repodoctor
       REPODOCTOR_ALLOWED_ROOTS: /repositories
-      REPODOCTOR_CORS_ORIGINS: http://localhost:3000
+      REPODOCTOR_CORS_ORIGINS: ${REPODOCTOR_CORS_ORIGINS:-http://localhost}
     depends_on:
       database:
         condition: service_healthy
-    ports: ["8000:8000"]
     volumes:
       - ./sample-repositories:/repositories:ro
 
   web:
-    build: ./apps/web
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_URL: ""
+    restart: unless-stopped
     depends_on: [api]
-    ports: ["3000:3000"]
+
+  gateway:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    environment:
+      CADDY_SITE_ADDRESS: ${CADDY_SITE_ADDRESS:?set CADDY_SITE_ADDRESS in .env}
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
 
 volumes:
   postgres-data:
+  caddy-data:
+  caddy-config:
