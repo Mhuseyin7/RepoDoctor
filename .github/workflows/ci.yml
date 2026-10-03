@@ -37,3 +37,16 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: docker build --tag repodoctor-api:test .
+      - run: docker build --tag repodoctor-web:test apps/web
+      - run: >-
+          POSTGRES_PASSWORD=ci-only-password
+          CADDY_SITE_ADDRESS=:80
+          CADDY_BASIC_AUTH_USER=ci
+          CADDY_BASIC_AUTH_HASH='$2a$14$abcdefghijklmnopqrstuuPDEbNShLOJkOHcKPA4QyJiB3Z3DgN9sYtW'
+          docker compose config --quiet
