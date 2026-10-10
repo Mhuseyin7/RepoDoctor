@@ -2,6 +2,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from repodoctor import __version__
 from repodoctor.api import create_app
 from repodoctor.config import Config
 from repodoctor.engine import scan
@@ -32,6 +33,7 @@ def test_dashboard_api_persists_local_scan(tmp_path: Path, monkeypatch) -> None:
         health = client.get("/api/health")
         assert health.status_code == 200
         assert health.json()["status"] == "ok"
+        assert client.get("/openapi.json").json()["info"]["version"] == __version__
         settings = client.get("/api/settings")
         assert settings.status_code == 200
         assert "database_url" not in settings.json()

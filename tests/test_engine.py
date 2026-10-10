@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
 
+from repodoctor import __version__
 from repodoctor.baseline import create as create_baseline
 from repodoctor.baseline import load as load_baseline
 from repodoctor.config import Config
@@ -54,7 +55,9 @@ def test_suppression_and_sarif(tmp_path: Path) -> None:
     config = Config.model_validate({"ignore": [{"rule": "SEC-003", "path": "src/**"}]})
     result = scan(tmp_path, config=config)
     assert all(item.rule_id != "SEC-003" for item in result.findings)
-    assert to_sarif(result)["version"] == "2.1.0"
+    sarif = to_sarif(result)
+    assert sarif["version"] == "2.1.0"
+    assert result.version == __version__
 
 
 def test_does_not_treat_documentation_strings_as_executable_code(tmp_path: Path) -> None:

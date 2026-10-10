@@ -28,6 +28,7 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 
+from . import __version__
 from .baseline import load as load_baseline
 from .config import load_config
 from .engine import ConfigurationError, scan
@@ -136,7 +137,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         Base.metadata.create_all(engine)
         yield
 
-    app = FastAPI(title="RepoDoctor API", version="0.2.0", docs_url="/docs", lifespan=lifespan)
+    app = FastAPI(title="RepoDoctor API", version=__version__, docs_url="/docs", lifespan=lifespan)
     origins = [
         item
         for item in os.getenv("REPODOCTOR_CORS_ORIGINS", "http://localhost:3000").split(",")

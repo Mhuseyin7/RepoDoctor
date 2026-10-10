@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from . import __version__
 from .config import Config, load_config
 from .discovery import discover
 from .models import Finding, ScanResult, Severity
@@ -44,7 +45,7 @@ def scan(
         package_managers=sorted(profile.package_managers),
         skipped_files=profile.skipped_files,
         scanned_files=len(profile.files),
-        version="0.1.0",
+        version=__version__,
     )
 
 
