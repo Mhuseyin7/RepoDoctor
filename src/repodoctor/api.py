@@ -91,7 +91,7 @@ def _database_url() -> str:
 
 def _allowed_roots() -> list[Path]:
     configured = os.getenv("REPODOCTOR_ALLOWED_ROOTS")
-    values = configured.split(os.pathsep) if configured else [str(Path.cwd())]
+    values = configured.split(os.pathsep) if configured else []
     return [Path(value).resolve() for value in values if value]
 
 
@@ -122,7 +122,7 @@ def _summary(record: ScanRecord, path: str) -> ScanSummary:
 
 
 def create_app(database_url: str | None = None) -> FastAPI:
-    """Create the API app; database migrations are performed explicitly by `init_database`."""
+    """Create the API app; production schema migrations are performed by Alembic."""
     url = database_url or _database_url()
     engine = create_engine(
         url,
@@ -199,6 +199,11 @@ def create_app(database_url: str | None = None) -> FastAPI:
         request: ScanRequest,
         session: Session = Depends(get_session),  # noqa: B008
     ) -> ScanSummary:
+        if not allowed_roots:
+            raise HTTPException(
+                status_code=503,
+                detail="REPODOCTOR_ALLOWED_ROOTS must be configured before scans are accepted",
+            )
         root = Path(request.path).resolve()
         if not root.is_dir():
             raise HTTPException(status_code=422, detail="path must be an existing directory")
@@ -210,7 +215,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
                 config=load_config(root),
                 baseline=load_baseline(root) if request.use_baseline else None,
             )
-        except ConfigurationError as exc:
+        except (ConfigurationError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         repository = session.scalar(
             select(RepositoryRecord).where(RepositoryRecord.path == str(root))
