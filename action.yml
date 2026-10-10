@@ -31,4 +31,11 @@ runs:
         python -m pip install "$GITHUB_ACTION_PATH"
         baseline_flag="--baseline"
         if [ "${{ inputs.baseline }}" != "true" ]; then baseline_flag="--no-baseline"; fi
-        repodoctor scan "$GITHUB_WORKSPACE" --format "${{ inputs.format }}" --output "$GITHUB_WORKSPACE/${{ inputs.report-path }}" --fail-on "${{ inputs.fail-on }}" $baseline_flag
+        report_path="${{ inputs.report-path }}"
+        case "$report_path" in
+          /*|..|../*|*/../*)
+            echo "report-path must stay inside the GitHub workspace" >&2
+            exit 2
+            ;;
+        esac
+        repodoctor scan "$GITHUB_WORKSPACE" --format "${{ inputs.format }}" --output "$GITHUB_WORKSPACE/$report_path" --fail-on "${{ inputs.fail-on }}" $baseline_flag
