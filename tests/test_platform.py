@@ -46,7 +46,9 @@ def test_dashboard_api_persists_local_scan(tmp_path: Path, monkeypatch) -> None:
         assert repositories.json()[0]["path"] == str(tmp_path)
 
 
-def test_dashboard_rejects_scans_without_an_explicit_allowed_root(tmp_path: Path, monkeypatch) -> None:
+def test_dashboard_rejects_scans_without_an_explicit_allowed_root(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.delenv("REPODOCTOR_ALLOWED_ROOTS", raising=False)
     app = create_app(f"sqlite:///{(tmp_path / 'dashboard.db').as_posix()}")
     with TestClient(app) as client:
@@ -54,7 +56,9 @@ def test_dashboard_rejects_scans_without_an_explicit_allowed_root(tmp_path: Path
     assert response.status_code == 503
 
 
-def test_dashboard_reports_an_invalid_baseline_as_a_client_error(tmp_path: Path, monkeypatch) -> None:
+def test_dashboard_reports_an_invalid_baseline_as_a_client_error(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.setenv("REPODOCTOR_ALLOWED_ROOTS", str(tmp_path))
     (tmp_path / ".repodoctor-baseline.json").write_text("not json", encoding="utf-8")
     app = create_app(f"sqlite:///{(tmp_path / 'dashboard.db').as_posix()}")

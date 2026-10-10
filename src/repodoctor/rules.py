@@ -297,9 +297,8 @@ def run_rules(profile: RepositoryProfile) -> list[Finding]:
         # covers every eligible text file; executable-code rules stay scoped to
         # source files to avoid documentation false positives.
         for number, raw in enumerate(lines, 1):
-            if any(pattern.search(raw) for pattern in SECRET_PATTERNS) and not _looks_like_placeholder(
-                raw
-            ):
+            has_secret = any(pattern.search(raw) for pattern in SECRET_PATTERNS)
+            if has_secret and not _looks_like_placeholder(raw):
                 findings.append(
                     _finding(
                         profile,
