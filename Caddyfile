@@ -1,6 +1,13 @@
 {$CADDY_SITE_ADDRESS} {
     encode zstd gzip
 
+    header {
+        -Server
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+    }
+
     # The dashboard can expose repository paths and findings. Keep both the UI
     # and API behind authentication when the stack is reachable from the Internet.
     basic_auth {
