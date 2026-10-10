@@ -292,6 +292,24 @@ def run_rules(profile: RepositoryProfile) -> list[Finding]:
             findings.append(
                 _finding(profile, "SEC-002", path=path, message="Tracked environment file detected")
             )
+        # Credentials frequently live in YAML, JSON, shell, and environment
+        # configuration rather than source code. Secret detection therefore
+        # covers every eligible text file; executable-code rules stay scoped to
+        # source files to avoid documentation false positives.
+        for number, raw in enumerate(lines, 1):
+            if any(pattern.search(raw) for pattern in SECRET_PATTERNS) and not _looks_like_placeholder(
+                raw
+            ):
+                findings.append(
+                    _finding(
+                        profile,
+                        "SEC-001",
+                        path=path,
+                        line=number,
+                        message="Possible committed secret detected",
+                        excerpt=_redact(raw),
+                    )
+                )
         if path.suffix.lower() in SOURCE_SUFFIXES:
             source = "\n".join(lines)
             if _has_credentialed_wildcard_cors(source):
@@ -306,19 +324,6 @@ def run_rules(profile: RepositoryProfile) -> list[Finding]:
                     )
                 )
             for number, raw in enumerate(lines, 1):
-                if any(
-                    pattern.search(raw) for pattern in SECRET_PATTERNS
-                ) and not _looks_like_placeholder(raw):
-                    findings.append(
-                        _finding(
-                            profile,
-                            "SEC-001",
-                            path=path,
-                            line=number,
-                            message="Possible committed secret detected",
-                            excerpt=_redact(raw),
-                        )
-                    )
                 executable = _code_without_strings(raw, path.suffix.lower())
                 if _debug_enabled(executable):
                     findings.append(

@@ -1,3 +1,4 @@
+import subprocess
 from pathlib import Path
 
 from repodoctor.baseline import create as create_baseline
@@ -24,6 +25,25 @@ def test_detects_secret_but_redacts_excerpt(tmp_path: Path) -> None:
     secret = next(item for item in result.findings if item.rule_id == "SEC-001")
     assert "REDACTED" in (secret.code_excerpt or "")
     assert "A1b2C3d4" not in (secret.code_excerpt or "")
+
+
+def test_detects_secrets_in_configuration_files(tmp_path: Path) -> None:
+    write(tmp_path, "settings.yml", "api_key: 'super-secret-value-12345'\n")
+    result = scan(tmp_path, config=Config())
+    secret = next(item for item in result.findings if item.rule_id == "SEC-001")
+    assert secret.file == "settings.yml"
+    assert "super-secret" not in (secret.code_excerpt or "")
+
+
+def test_detects_a_tracked_environment_file_even_when_gitignored(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True)
+    write(tmp_path, ".gitignore", ".env\n")
+    write(tmp_path, ".env", "TOKEN=not-a-real-token\n")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-f", ".env"], check=True)
+    result = scan(tmp_path, config=Config())
+    assert any(
+        item.rule_id == "SEC-002" and item.file == ".env" for item in result.findings
+    )
 
 
 def test_suppression_and_sarif(tmp_path: Path) -> None:

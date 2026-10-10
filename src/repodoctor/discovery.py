@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import fnmatch
 import os
+import subprocess
 from pathlib import Path
 
 from .config import Config
@@ -36,6 +37,7 @@ def discover(root: Path, config: Config) -> RepositoryProfile:
     files: list[Path] = []
     skipped = 0
     gitignore = _gitignore_patterns(root)
+    tracked_paths = _tracked_paths(root)
     for current, dirs, names in os.walk(root, followlinks=False):
         current_path = Path(current)
         dirs[:] = [
@@ -51,9 +53,16 @@ def discover(root: Path, config: Config) -> RepositoryProfile:
                 skipped += 1
                 continue
             relative = path.relative_to(root)
-            if _ignored(relative, config.exclude, is_dir=False) or _ignored(
-                relative, gitignore, is_dir=False
-            ):
+            if _ignored(relative, config.exclude, is_dir=False):
+                skipped += 1
+                continue
+            # A .gitignore rule does not stop Git from retaining a file that was
+            # committed earlier. Keep such environment files in scope so SEC-002
+            # accurately reports them instead of silently skipping a credential risk.
+            tracked_environment = (
+                path.name.startswith(".env") and relative.as_posix() in tracked_paths
+            )
+            if _ignored(relative, gitignore, is_dir=False) and not tracked_environment:
                 skipped += 1
                 continue
             try:
@@ -146,6 +155,26 @@ def _gitignore_patterns(root: Path) -> list[str]:
         for line in content.splitlines()
         if line.strip() and not line.lstrip().startswith("#") and not line.startswith("!")
     ]
+
+
+def _tracked_paths(root: Path) -> set[str]:
+    """Return Git-indexed paths without reading or executing repository code."""
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z"],
+            check=False,
+            capture_output=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    if completed.returncode != 0:
+        return set()
+    return {
+        value.decode("utf-8", errors="surrogateescape")
+        for value in completed.stdout.split(b"\0")
+        if value
+    }
 
 
 def _ignored(path: Path, patterns: list[str], *, is_dir: bool) -> bool:
