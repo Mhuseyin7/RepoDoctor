@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from repodoctor import __version__
-from repodoctor.api import create_app
+from repodoctor.api import _auto_create_schema, create_app
 from repodoctor.config import Config
 from repodoctor.engine import scan
 from repodoctor.fixes import planned_fixes
@@ -61,3 +61,11 @@ def test_dashboard_reports_an_invalid_baseline_as_a_client_error(tmp_path: Path,
     with TestClient(app) as client:
         response = client.post("/api/scans", json={"path": str(tmp_path)})
     assert response.status_code == 422
+
+
+def test_schema_creation_defaults_to_sqlite_only(monkeypatch) -> None:
+    monkeypatch.delenv("REPODOCTOR_AUTO_CREATE_SCHEMA", raising=False)
+    assert _auto_create_schema("sqlite:///dashboard.db")
+    assert not _auto_create_schema("postgresql+psycopg://user:pass@database/app")
+    monkeypatch.setenv("REPODOCTOR_AUTO_CREATE_SCHEMA", "true")
+    assert _auto_create_schema("postgresql+psycopg://user:pass@database/app")

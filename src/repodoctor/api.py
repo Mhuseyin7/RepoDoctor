@@ -89,6 +89,14 @@ def _database_url() -> str:
     return os.getenv("REPODOCTOR_DATABASE_URL", "sqlite:///./repodoctor.db")
 
 
+def _auto_create_schema(url: str) -> bool:
+    """Keep zero-config SQLite development convenient without bypassing production migrations."""
+    override = os.getenv("REPODOCTOR_AUTO_CREATE_SCHEMA")
+    if override is not None:
+        return override.strip().lower() in {"1", "true", "yes"}
+    return url.startswith("sqlite")
+
+
 def _allowed_roots() -> list[Path]:
     configured = os.getenv("REPODOCTOR_ALLOWED_ROOTS")
     values = configured.split(os.pathsep) if configured else []
@@ -134,7 +142,8 @@ def create_app(database_url: str | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        Base.metadata.create_all(engine)
+        if _auto_create_schema(url):
+            Base.metadata.create_all(engine)
         yield
 
     app = FastAPI(title="RepoDoctor API", version=__version__, docs_url="/docs", lifespan=lifespan)

@@ -44,7 +44,7 @@ $env:NEXT_PUBLIC_API_URL = "http://localhost:8000"
 npm run dev
 ```
 
-Production stack; PostgreSQL, API, dashboard ve Caddy reverse proxy içerir. API ile dashboard doğrudan public port açmaz; yalnızca Caddy üzerinden ulaşılır. İlk kurulum, HTTPS, Basic Auth, backup, update ve rollback adımları için [DEPLOYMENT.md](DEPLOYMENT.md) dosyasını izleyin. PostgreSQL için `REPODOCTOR_DATABASE_URL` kullanılır; Alembic migration'ları container başlangıcında uygulanır.
+Production stack; PostgreSQL, API, dashboard ve Caddy reverse proxy içerir. API ile dashboard doğrudan public port açmaz; yalnızca Caddy üzerinden ulaşılır. İlk kurulum, HTTPS, Basic Auth, backup, update ve rollback adımları için [DEPLOYMENT.md](DEPLOYMENT.md) dosyasını izleyin. PostgreSQL için `REPODOCTOR_DATABASE_URL` kullanılır; Alembic migration'ları container başlangıcında uygulanır. SQLite development database'leri otomatik oluşturulur; başka bir database için `alembic upgrade head` çalıştırın.
 
 ## Release ve distribution
 
